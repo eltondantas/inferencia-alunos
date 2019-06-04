@@ -165,7 +165,7 @@ tibble(diferenca = diffs1) %>%
 ```
 
 ```{r}
-mean(abs(diffs) >= abs(theta_diferenca_fds(dados, 1:NROW(dados))))
+mean(abs(diffs1) >= abs(theta_diferenca_fds(dados, 1:NROW(dados))))
 ```
 
 ### A versão paramétrica

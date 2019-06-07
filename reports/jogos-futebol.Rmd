@@ -2,10 +2,6 @@
 title: "Uma amostra de jogos do campeonato brasileiro de futebol (1a divisão)"
 author: "Elton Dantas de Oliveira Mesquita"
 date: "4 de junho de 2019"
-output: html_document
----
----
-title: "Uma amostra de alunos do CCC"
 output:
     html_document:
     df_print: paged
@@ -26,45 +22,29 @@ knitr::opts_chunk$set(tidy = FALSE,
 ```
 
 ```{r read}
-dados = read_csv2(here::here("data/amostra-futebol.csv"), 
-                 ) 
-dados = dados %>%
-    rename(
-        horario = `Horario`,
-        dia = `Dia`,
-        data = `Data`,
-        clube1 = `Clube 1`,
-        clube2 = `Clube 2`,
-        vencedor = `Vencedor`,
-        rodada = `Rodada`,
-        arena = `Arena`,
-        p1 = `p1`,
-        p2 = `p2`,
-        gols = `gols`,
-        c1_uf = `C1 Estado`,
-        c2_uf = `C2 Estado`,
-        vencedor_uf = `Vencedor Estado`
-    )
+dados = read_csv2(here::here("data/amostra-futebol.csv")) %>%
+    rename(horario = `Horario`,
+           dia = `Dia`,
+           data = `Data`,
+           clube1 = `Clube 1`,
+           clube2 = `Clube 2`,
+           vencedor = `Vencedor`,
+           rodada = `Rodada`,
+           arena = `Arena`,
+           p1 = `p1`,
+           p2 = `p2`,
+           gols = `gols`,
+           c1_uf = `C1 Estado`,
+           c2_uf = `C2 Estado`,
+           vencedor_uf = `Vencedor Estado`)
 glimpse(dados)
 ```
 
-
 Usaremos nessa parte do lab dados de uma amostra de jogos do campeonato brasileiro de futebol (1a divisão). Nossa amostra tem todos os jogos de 2017, e a partir deles, queremos responder duas perguntas sobre os jogos em geral desse campeonato:
 
-1. Jogos aos domingos têm mais gols que jogos às quartas?
-2. Jogos onde há um vitorioso têm mais ou menos gols que empates?
+##1. Jogos aos domingos têm mais gols que jogos às quartas?
 
-Sua tarefa é construir um relatório em RMarkdown que:
-
-a. Responde essas duas perguntas usando testes de hipótese
-b. Responde essas duas perguntas usando ICs
-c. Compara as repostas, dizendo se elas concordam, e se alguma das duas tem mais informação que a outra (se sim, diga qual). 
-
-
-
-#1. Jogos aos domingos têm mais gols que jogos às quartas?
-
-##a) Usando ICs via Bootstrapping
+###a) Usando ICs via Bootstrapping
 ```{r}
 theta_diferenca_gols = function(d, i){
     gols = d %>% 
@@ -102,7 +82,7 @@ dados_boot1 %>%
 ```
 
 
-##b) Usando Teste de Hipótese
+###b) Usando Teste de Hipótese
 
     O número de gols do domingo <= número de gols da quarta-feira:
         H0: gols_gom - gols_qua <= 0;
@@ -139,15 +119,15 @@ tibble(diferenca = diffs1) %>%
     geom_rug()
 ```
 
-### p-valor
+####p-valor
 ```{r}
 mean(abs(diffs1) >= abs(theta_diferenca_gols(dados, 1:NROW(dados))))
 ```
 
 
-#2. Jogos onde há um vitorioso têm mais ou menos gols que empates?
+##2. Jogos onde há um vitorioso têm mais ou menos gols que empates?
 
-##a) Usando ICs via Bootstrapping
+###a) Usando ICs via Bootstrapping
 ```{r}
 theta_dif_prop_gols = function(d, i){
     gols = d %>% 
@@ -186,7 +166,7 @@ dados_boot2 %>%
 ```
 
 
-##b) Usando Teste de Hipótese
+###b) Usando Teste de Hipótese
 
     O número de gols de jogos com vencedor <= o número de gols de jogos com empate:
         H0: gols_vencedor - gols_empate <= 0;
@@ -223,20 +203,20 @@ tibble(diferenca = diffs2) %>%
     geom_rug()
 ```
 
-### p-valor
+####p-valor
 ```{r}
 mean(abs(diffs2) >= abs(theta_dif_prop_gols(dados, 1:NROW(dados))))
 ```
 
-#Conclusões
+##Conclusão
 
-Podemos analisar (testar) as duas situações (efeitos) em duas hipóteses cada:
-    1ª) H0 = número de gols do domingo <= número de gols da quarta;
-        HA = número de gols do domingo > número de gols da quarta.
-    2ª) H0 = gols_vencedor - gols_empate <= 0;
-        HA = gols_vencedor - gols_empate > 0.
-* HO = hipótese nula, HA = hipótese alternativa.
-Então, dado que a significância em ambas é de 0,05 (5%), o p-valor de 0,9 obtido na primeira é considerado altíssimo. Isto significa que na veracidade da hipótese nula, os dados da amostra são bastante prováveis. Já na segunda, o p-valor de 0,0012 está muito abaixo da significância. Então, assumindo que a hipótese nula seja verdadeira, os dados da amostra são improváveis.
-Percebe-se um considerável nível de abstração e cuidado para entender o p-valor, uma vez que, além de não tratar da hipótese alternativa, ele pode induzir ao erro de afirmar que a hipótese nula é verdadeira ou falsa.
-Já com relação ao intervalo de confiança, na primeira situação, observa-se que o 0 está inserido nele e que seus pontos extremos distanciam dele quase que na mesma intensidade. Então, podemos estimar que não há uma diferença significativa entre as médias de gols de jogos do domingo e da quarta-feira. Resumidamente, a estimativa é de que os jogos do domingo tenham o mesmo número de gols que os da quarta-feira. Na segunda situação, o intervalo é positivo e não inclui o 0. Então, podemos estimar que o número de gols de jogos com vencedores é maior, ainda que não muito, que o número de gols de jogos com empates.
-Comparado ao teste de hipótese com o p-valor, o intervalo de confiança pode ser mais intuitivo por apresentar valores como a estatística, o erro padrão e os limites inferior e superior. Sobretudo, o intervalo de confiança não exige tanta abstração.
+    Podemos analisar (testar) as duas situações (efeitos) em duas hipóteses cada:
+        1ª) H0 = número de gols do domingo <= número de gols da quarta;
+            HA = número de gols do domingo > número de gols da quarta.
+        2ª) H0 = gols_vencedor - gols_empate <= 0;
+            HA = gols_vencedor - gols_empate > 0.
+    * HO = hipótese nula, HA = hipótese alternativa.
+    Então, dado que a significância em ambas é de 0,05 (5%), o p-valor de 0,9 obtido na primeira é considerado altíssimo. Isto significa que na veracidade da hipótese nula, estimamos que os dados da amostra são bastante prováveis. Já na segunda, o p-valor de 0,0012 está muito abaixo da significância. Então, assumindo que a hipótese nula seja verdadeira, estimamos que os dados da amostra são improváveis.
+    Percebe-se um considerável nível de abstração e cuidado para entender o p-valor, uma vez que, além de não tratar da hipótese alternativa, ele pode induzir ao erro de afirmar que a hipótese nula é verdadeira ou falsa.
+    Já com relação ao intervalo de confiança, na primeira situação, observa-se que o 0 está inserido nele e que seus pontos extremos distanciam dele praticamente na mesma intensidade. Então, podemos estimar que não há uma diferença significativa entre as médias de gols de jogos do domingo e da quarta-feira. Resumidamente, a estimativa é de que os jogos do domingo tenham o mesmo número de gols que os da quarta-feira. Na segunda situação, o intervalo é positivo e não inclui o 0. Então, podemos estimar que o número de gols de jogos com vencedores é maior, ainda que não muito, que o número de gols de jogos com empates.
+    Comparado ao teste de hipótese com o p-valor, o intervalo de confiança pode ser mais intuitivo por apresentar valores como a estatística, o erro padrão e os limites inferior e superior. Sobretudo, o intervalo de confiança não exige tanta abstração.

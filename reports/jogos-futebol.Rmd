@@ -35,7 +35,7 @@ dados = dados %>%
         data = `Data`,
         clube1 = `Clube 1`,
         clube2 = `Clube 2`,
-        vencendor = `Vencedor`,
+        vencedor = `Vencedor`,
         rodada = `Rodada`,
         arena = `Arena`,
         p1 = `p1`,
@@ -56,15 +56,15 @@ Usaremos nessa parte do lab dados de uma amostra de jogos do campeonato brasilei
 
 Sua tarefa é construir um relatório em RMarkdown que:
 
-a. Responde essas duas perguntas usando testes de hipótese via permutação
+a. Responde essas duas perguntas usando testes de hipótese
 b. Responde essas duas perguntas usando ICs
 c. Compara as repostas, dizendo se elas concordam, e se alguma das duas tem mais informação que a outra (se sim, diga qual). 
 
 
 
-#Jogos aos domingos têm mais gols que jogos às quartas?
+#1. Jogos aos domingos têm mais gols que jogos às quartas?
 
-##Usando ICs
+##a) Usando ICs via Bootstrapping
 ```{r}
 theta_diferenca_gols = function(d, i){
     gols = d %>% 
@@ -78,20 +78,36 @@ theta_diferenca_gols = function(d, i){
     gols_dom - gols_qua
 }
 
-
-theta_c_gols = theta_diferenca_gols(dados, 1:NROW(dados))
-
-theta_c_gols
+theta_diferenca_gols(dados, 1:NROW(dados))
 ```
 ```{r}
-library(boot)
-dados %>% 
-    boot(statistic = theta_diferenca_gols, R = 4000) %>% 
+dados_boot1 = dados %>% 
+    boot(statistic = theta_diferenca_gols, R = 5000) %>% 
     tidy(conf.level = 0.95, 
          conf.int = TRUE)
+dados_boot1
 ```
 
-##Usando Testes de Hipótese
+```{r}
+dados_boot1 %>% 
+    ggplot(aes(x = "",
+           y = statistic,
+           ymin = conf.low,
+           ymax = conf.high
+    )) +
+    geom_pointrange() +
+    geom_point(size = 3) +
+    labs(title = expression("Intervalo estimado via bootstrapping"),
+         x = "")
+```
+
+
+##b) Usando Teste de Hipótese
+
+    O número de gols do domingo <= número de gols da quarta-feira:
+        H0: gols_gom - gols_qua <= 0;
+    O número de gols do domingo > número de gols da quarta-feira:
+        HA: gols_dom - gols_qua > 0.
 
 ```{r}
 theta_embaralhado = function(d){
@@ -113,16 +129,114 @@ theta_embaralhado(dados)
 diffs1 = replicate(5000, {theta_embaralhado(dados)})
 
 tibble(diferenca = diffs1) %>% 
-  ggplot(aes(x = diferenca)) + 
-  # geom_histogram(binwidth = .2, fill = "white", color = "darkgreen") +
-    geom_density(fill = "white", color = "darkgreen") + 
-  geom_vline(xintercept = theta_diferenca_gols(dados, 1:NROW(dados)), 
-             color = "orange") + 
-    geom_vline(xintercept = - theta_diferenca_gols(dados, 1:NROW(dados)), 
-             color = "orange") + 
+    ggplot(aes(x = diferenca)) +
+    geom_density(fill = "white",
+                 color = "darkgreen") +
+    geom_vline(xintercept = theta_diferenca_gols(dados, 1:NROW(dados)),
+               color = "orange") + 
+    # geom_vline(xintercept = -theta_diferenca_gols(dados, 1:NROW(dados)),
+               # color = "orange") + 
     geom_rug()
 ```
+
+### p-valor
 ```{r}
 mean(abs(diffs1) >= abs(theta_diferenca_gols(dados, 1:NROW(dados))))
 ```
 
+
+#2. Jogos onde há um vitorioso têm mais ou menos gols que empates?
+
+##a) Usando ICs via Bootstrapping
+```{r}
+theta_dif_prop_gols = function(d, i){
+    gols = d %>% 
+        slice(i) %>% 
+        group_by(vencedor_uf) %>% 
+        summarise(gols_soma = sum(gols)) 
+    
+    gols_vencedor = gols %>% filter(vencedor_uf != "Empate") %>% pull(gols_soma)
+    gols_empate = gols %>% filter(vencedor_uf == "Empate") %>% pull(gols_soma)
+    
+    #a diferença entre as proporções de gols entre jogos com vencedor e jogos com empate
+    sum(gols_vencedor)/length(d$vencedor_uf) - gols_empate/length(d$vencedor_uf)
+}
+
+theta_dif_prop_gols(dados, 1:NROW(dados))
+```
+```{r}
+dados_boot2 = dados %>% 
+    boot(statistic = theta_dif_prop_gols, R = 5000) %>% 
+    tidy(conf.level = 0.95, 
+         conf.int = TRUE)
+dados_boot2
+```
+
+```{r}
+dados_boot2 %>% 
+    ggplot(aes(x = "",
+           y = statistic,
+           ymin = conf.low,
+           ymax = conf.high
+    )) +
+    geom_pointrange() +
+    geom_point(size = 3) +
+    labs(title = expression("Intervalo estimado via bootstrapping"),
+         x = "")
+```
+
+
+##b) Usando Teste de Hipótese
+
+    O número de gols de jogos com vencedor <= o número de gols de jogos com empate:
+        H0: gols_vencedor - gols_empate <= 0;
+    O número de gols de jogos com vencedor >  o número de gols de jogos com empate:
+        HA: gols_vencedor - gols_empate > 0.
+
+```{r}
+theta_embaralhado = function(d){
+    gols = d %>% 
+        mutate(vencedor_embaralhado = sample(vencedor_uf, n())) %>% 
+        group_by(vencedor_embaralhado) %>% 
+        summarise(gols_soma = sum(gols)) 
+    
+    gols_vencedor = gols %>% filter(vencedor_embaralhado != "Empate") %>% pull(gols_soma)
+    gols_empate = gols %>% filter(vencedor_embaralhado == "Empate") %>% pull(gols_soma)
+    
+    sum(gols_vencedor)/length(d$vencedor_uf) - gols_empate/length(d$vencedor_uf)
+}
+
+theta_embaralhado(dados)
+```
+
+```{r}
+diffs2 = replicate(5000, {theta_embaralhado(dados)})
+
+tibble(diferenca = diffs2) %>% 
+    ggplot(aes(x = diferenca)) +
+    geom_density(fill = "white",
+                 color = "darkgreen") +
+    geom_vline(xintercept = theta_dif_prop_gols(dados, 1:NROW(dados)),
+               color = "orange") + 
+    # geom_vline(xintercept = -theta_dif_prop_gols(dados, 1:NROW(dados)),
+    #            color = "orange") + 
+    geom_rug()
+```
+
+### p-valor
+```{r}
+mean(abs(diffs2) >= abs(theta_dif_prop_gols(dados, 1:NROW(dados))))
+```
+
+#Conclusões
+
+Podemos analisar (testar) as duas situações (efeitos) em duas hipóteses cada:
+    1ª) H0 = número de gols do domingo <= número de gols da quarta;
+        HA = número de gols do domingo > número de gols da quarta.
+    2ª) H0 = gols_vencedor - gols_empate <= 0;
+        HA = gols_vencedor - gols_empate > 0.
+* HO = hipótese nula, HA = hipótese alternativa.
+Então, dado que a significância em ambas é de 0,05 (5%), o p-valor de 0,9 obtido na primeira é considerado altíssimo. Isto significa que na veracidade da hipótese nula, os dados da amostra são bastante prováveis. Já na segunda, o p-valor de 0,0012 está muito abaixo da significância. Então, assumindo que a hipótese nula seja verdadeira, os dados da amostra são improváveis.
+Percebe-se um considerável nível de abstração e cuidado para entender o p-valor, uma vez que, além de não tratar da hipótese alternativa, ele pode induzir ao erro de afirmar que a hipótese nula é verdadeira ou falsa.
+Já com relação ao intervalo de confiança, na primeira situação, observa-se que o 0 está inserido nele e que seus pontos extremos distanciam dele quase que na mesma intensidade. Então, podemos estimar que não há uma diferença significativa entre as médias de gols de jogos do domingo e da quarta-feira. Resumidamente, a estimativa é de que os jogos do domingo tenham o mesmo número de gols que os da quarta-feira. Na segunda situação, o intervalo é positivo e não inclui o 0. Então, podemos estimar que o número de gols de jogos com vencedores é maior, ainda que não muito, que o número de gols de jogos com empates.
+Comparado ao teste de hipótese com o p-valor, o intervalo de confiança pode ser mais intuitivo por apresentar valores como a estatística, o erro padrão e os limites inferior e superior. Sobretudo, o intervalo de confiança não exige tanta abstração.
